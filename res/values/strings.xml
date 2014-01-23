@@ -3,6 +3,6 @@
 
     <string name="app_name">kilroggeyes</string>
     <string name="action_settings">Settings</string>
-    
+    <drawable name="bkcolor">#000000</drawable>  
 
 </resources>
