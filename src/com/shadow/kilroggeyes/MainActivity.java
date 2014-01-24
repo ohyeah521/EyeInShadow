@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
 
 	WakeLock mWakeLock = null;
 	String DirPath = "/save";
+	int AutoExposureDelay = 500;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -178,6 +179,7 @@ public class MainActivity extends Activity {
 		};
 
 		try {
+			Thread.sleep(AutoExposureDelay);
 			camera.takePicture(null, null, pcb);
 		} catch (Exception e) {
 			camera.release();
@@ -189,9 +191,11 @@ public class MainActivity extends Activity {
 	public void savetoPic(byte[] data) {
 		Calendar c = Calendar.getInstance();
 		String datestring = "" + c.get(Calendar.YEAR)
-				+ (c.get(Calendar.MONTH) + 1) + c.get(Calendar.DAY_OF_MONTH)
-				+ c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.HOUR)
-				+ c.get(Calendar.MINUTE) + c.get(Calendar.SECOND);
+				+ String.format("%02d",(c.get(Calendar.MONTH) + 1)) 
+				+ String.format("%02d", c.get(Calendar.DAY_OF_MONTH))
+				+ String.format("%02d", c.get(Calendar.HOUR_OF_DAY))
+				+ String.format("%02d", c.get(Calendar.MINUTE)) 
+				+ String.format("%02d", c.get(Calendar.SECOND));
 
 		String Path = Environment.getExternalStorageDirectory() + DirPath;
 		File dir = new File(Path);
