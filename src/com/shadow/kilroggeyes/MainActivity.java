@@ -107,11 +107,13 @@ public class MainActivity extends Activity {
 		switch (keyCode) {
 
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
+			giveVibrator();
 			catchCamera(false);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0);
 			return true;
 
 		case KeyEvent.KEYCODE_VOLUME_UP:
+			giveVibrator();
 			catchCamera(true);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0);
 			return true;
@@ -200,14 +202,6 @@ public class MainActivity extends Activity {
 
 		});
 
-
-//		try {
-//			Thread.sleep(AutoExposureDelay);
-//			camera.takePicture(null, null, pcb);
-//		} catch (Exception e) {
-//			camera.release();
-//			return false;
-//		}
 		return true;
 	}
 
