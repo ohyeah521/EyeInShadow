@@ -1,54 +1,65 @@
 package com.shadow.kilroggeyes;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
 import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
+import android.hardware.Camera.AutoFocusCallback;
+import android.hardware.Camera.Parameters;
+import android.hardware.Camera.PictureCallback;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.Vibrator;
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
-import android.hardware.Camera.AutoFocusCallback;
-import android.hardware.Camera.Parameters;
-import android.hardware.Camera.PictureCallback;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.Menu;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.Toast;
 
-public class MainActivity extends Activity {
+public class EyesInBlackActivity extends Activity {
 
 	WakeLock mWakeLock = null;
-	String DirPath = "/save";
-	int AutoExposureDelay = 1000;
 	AudioManager mAudioManager;
-	int AudioMode;
+	Camera mCamera = null;
+	Vibrator mVibrator = null;
 	
-	PictureCallback pcb = new PictureCallback() {
+	String mDirPath = "/save";
+	int mAudioMode;
+	boolean mBackCamera=true;
+	
+	PictureCallback mPcb = new PictureCallback() {
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
-			giveVibrator();
+			long l[] = {0,100,300,100};
+			mVibrator.vibrate(l,-1);
 			savetoPic(data);
 			camera.release();
+			CloseCamera();
+		}
+	};
+	
+	AutoFocusCallback mAfc = new AutoFocusCallback() {
+		@Override
+		public void onAutoFocus(boolean success, Camera camera) {
+			if (success) {
+				try {
+					camera.takePicture(null, null, mPcb);
+					camera.cancelAutoFocus();
+				} catch (Exception e) {
+					camera.release();
+					CloseCamera();
+				}
+			}
 		}
 	};
 
@@ -62,22 +73,20 @@ public class MainActivity extends Activity {
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		
 		mAudioManager = (AudioManager)this.getSystemService(Context.AUDIO_SERVICE);
-		AudioMode = mAudioManager.getRingerMode();
+		mAudioMode = mAudioManager.getRingerMode();
 		mAudioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+		mVibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
 
 		setContentView(R.layout.activity_main);
 		setBritness(1);
 		acquireWakeLock();
-
-		// Intent intent = new Intent();
-		// intent.setClass(MainActivity.this, EyesinShadowService.class);
-		// startService(intent);
 	}
 
 	@Override
 	protected void onDestroy() {
 		releaseWakeLock();
-		mAudioManager.setRingerMode(AudioMode);
+		mAudioManager.setRingerMode(mAudioMode);
+		CloseCamera();
 		super.onDestroy();
 	}
 
@@ -100,6 +109,30 @@ public class MainActivity extends Activity {
 		getWindow().setAttributes(params);
 
 	}
+	
+	public void catchCamera(boolean BackCamera)
+	{
+		if(mCamera==null)
+		{
+			mVibrator.vibrate(50);
+			mBackCamera = BackCamera;
+			mCamera = OpenCamera(mBackCamera);
+			if(mCamera!=null)
+			{
+				mCamera.startPreview();
+			}
+		}
+		else if(mBackCamera==BackCamera)
+		{
+			mVibrator.vibrate(50);
+			mCamera.autoFocus(mAfc);
+		}
+		else
+		{
+			mVibrator.vibrate(50);
+			mCamera.takePicture(null, null, mPcb);
+		}
+	}
 
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -107,13 +140,11 @@ public class MainActivity extends Activity {
 		switch (keyCode) {
 
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
-			giveVibrator();
 			catchCamera(false);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0);
 			return true;
 
 		case KeyEvent.KEYCODE_VOLUME_UP:
-			giveVibrator();
 			catchCamera(true);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0);
 			return true;
@@ -121,12 +152,6 @@ public class MainActivity extends Activity {
 		return super.onKeyDown(keyCode, event);
 	}
 	
-	public void giveVibrator()
-	{
-		Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE); 
-		vibrator.vibrate(100);
-	}
-
 	@SuppressLint("NewApi")
 	private int FindCamera(boolean back) {
 		int cameraCount = 0;
@@ -144,14 +169,23 @@ public class MainActivity extends Activity {
 		}
 		return -1;
 	}
+	
+	public void CloseCamera()
+	{
+		if(mCamera!=null)
+		{
+			mCamera.release();
+			mCamera = null;
+		}
+	}
 
 	// Main Func of Catch Camera
 	@SuppressLint("NewApi")
-	public boolean catchCamera(boolean backCamera) {
+	public Camera OpenCamera(boolean backCamera) {
 
 		int cameraindex = FindCamera(backCamera);
 		if (cameraindex == -1) {
-			return false;
+			return null;
 		}
 
 		// Open Camera, Set Camera
@@ -177,32 +211,10 @@ public class MainActivity extends Activity {
 			}
 			camera.setPreviewTexture(new SurfaceTexture(0));
 		} catch (Exception e1) {
-			return false;
+			return null;
 		}
 
-		// Start Camera
-		camera.startPreview();
-		try {
-			Thread.sleep(AutoExposureDelay);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		camera.autoFocus(new AutoFocusCallback() {
-			@Override
-			public void onAutoFocus(boolean success, Camera camera) {
-				if (success) {
-					try {
-						camera.takePicture(null, null, pcb);
-					} catch (Exception e) {
-						camera.release();
-					}
-				}
-			}
-
-		});
-
-		return true;
+		return camera;
 	}
 
 	public void savetoPic(byte[] data) {
@@ -214,7 +226,7 @@ public class MainActivity extends Activity {
 				+ String.format("%02d", c.get(Calendar.MINUTE)) 
 				+ String.format("%02d", c.get(Calendar.SECOND));
 
-		String Path = Environment.getExternalStorageDirectory() + DirPath;
+		String Path = Environment.getExternalStorageDirectory() + mDirPath;
 		File dir = new File(Path);
 		dir.mkdirs();
 		Path += "/" + datestring + ".zip";
