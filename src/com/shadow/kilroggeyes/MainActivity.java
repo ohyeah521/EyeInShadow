@@ -46,8 +46,8 @@ public class MainActivity extends Activity {
 	PictureCallback pcb = new PictureCallback() {
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
-			savetoPic(data);
 			giveVibrator();
+			savetoPic(data);
 			camera.release();
 		}
 	};
