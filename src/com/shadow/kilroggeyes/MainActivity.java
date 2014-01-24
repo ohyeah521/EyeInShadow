@@ -13,10 +13,12 @@ import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.os.Vibrator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -37,7 +39,18 @@ public class MainActivity extends Activity {
 
 	WakeLock mWakeLock = null;
 	String DirPath = "/save";
-	int AutoExposureDelay = 500;
+	int AutoExposureDelay = 1000;
+	AudioManager mAudioManager;
+	int AudioMode;
+	
+	PictureCallback pcb = new PictureCallback() {
+		@Override
+		public void onPictureTaken(byte[] data, Camera camera) {
+			savetoPic(data);
+			giveVibrator();
+			camera.release();
+		}
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +60,10 @@ public class MainActivity extends Activity {
 		// 去掉Activity上面的状态栏
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		
+		mAudioManager = (AudioManager)this.getSystemService(Context.AUDIO_SERVICE);
+		AudioMode = mAudioManager.getRingerMode();
+		mAudioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
 
 		setContentView(R.layout.activity_main);
 		setBritness(1);
@@ -60,6 +77,7 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		releaseWakeLock();
+		mAudioManager.setRingerMode(AudioMode);
 		super.onDestroy();
 	}
 
@@ -86,22 +104,25 @@ public class MainActivity extends Activity {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		// 获取手机当前音量值
-
 		switch (keyCode) {
 
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
 			catchCamera(false);
-			// Toast.makeText (getApplicationContext(), "Down ",
-			// Toast.LENGTH_SHORT).show ();
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0);
 			return true;
 
 		case KeyEvent.KEYCODE_VOLUME_UP:
 			catchCamera(true);
-			// Toast.makeText (getApplicationContext(), "Up",
-			// Toast.LENGTH_SHORT).show ();
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0);
 			return true;
 		}
 		return super.onKeyDown(keyCode, event);
+	}
+	
+	public void giveVibrator()
+	{
+		Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE); 
+		vibrator.vibrate(100);
 	}
 
 	@SuppressLint("NewApi")
@@ -148,7 +169,6 @@ public class MainActivity extends Activity {
 						p.set("orientation", "portrait");
 						p.setRotation(270);
 					}
-
 					camera.setParameters(p);
 				}
 			} catch (Exception e) {
@@ -160,31 +180,34 @@ public class MainActivity extends Activity {
 
 		// Start Camera
 		camera.startPreview();
+		try {
+			Thread.sleep(AutoExposureDelay);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		camera.autoFocus(new AutoFocusCallback() {
 			@Override
 			public void onAutoFocus(boolean success, Camera camera) {
 				if (success) {
-					camera.cancelAutoFocus();
+					try {
+						camera.takePicture(null, null, pcb);
+					} catch (Exception e) {
+						camera.release();
+					}
 				}
 			}
 
 		});
 
-		PictureCallback pcb = new PictureCallback() {
-			@Override
-			public void onPictureTaken(byte[] data, Camera camera) {
-				savetoPic(data);
-				camera.release();
-			}
-		};
 
-		try {
-			Thread.sleep(AutoExposureDelay);
-			camera.takePicture(null, null, pcb);
-		} catch (Exception e) {
-			camera.release();
-			return false;
-		}
+//		try {
+//			Thread.sleep(AutoExposureDelay);
+//			camera.takePicture(null, null, pcb);
+//		} catch (Exception e) {
+//			camera.release();
+//			return false;
+//		}
 		return true;
 	}
 
