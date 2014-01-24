@@ -125,12 +125,12 @@ public class EyesInBlackActivity extends Activity {
 		else if(mBackCamera==BackCamera)
 		{
 			mVibrator.vibrate(50);
-			mCamera.autoFocus(mAfc);
+			mCamera.takePicture(null, null, mPcb);
 		}
 		else
 		{
 			mVibrator.vibrate(50);
-			mCamera.takePicture(null, null, mPcb);
+			mCamera.autoFocus(mAfc);
 		}
 	}
 
