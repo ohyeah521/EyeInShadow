@@ -1,4 +1,4 @@
-package com.shadow.kilroggeyes;
+package com.shadow.eye;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import com.shadow.eye.R;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -34,7 +36,7 @@ public class EyesInBlackActivity extends Activity {
 	Vibrator mVibrator = null;
 	
 	String mDirPath = "/save";
-	int mAudioMode;
+	//int mAudioMode;
 	boolean mBackCamera=true;
 	
 	PictureCallback mPcb = new PictureCallback() {
@@ -73,8 +75,8 @@ public class EyesInBlackActivity extends Activity {
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		
 		mAudioManager = (AudioManager)this.getSystemService(Context.AUDIO_SERVICE);
-		mAudioMode = mAudioManager.getRingerMode();
-		mAudioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+		//mAudioMode = mAudioManager.getRingerMode();
+		//mAudioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
 		mVibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
 
 		setContentView(R.layout.activity_main);
@@ -85,7 +87,7 @@ public class EyesInBlackActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		releaseWakeLock();
-		mAudioManager.setRingerMode(mAudioMode);
+		//mAudioManager.setRingerMode(mAudioMode);
 		CloseCamera();
 		super.onDestroy();
 	}
@@ -205,6 +207,7 @@ public class EyesInBlackActivity extends Activity {
 						p.set("orientation", "portrait");
 						p.setRotation(270);
 					}
+					p.setAntibanding(Parameters.ANTIBANDING_60HZ);
 					camera.setParameters(p);
 				}
 			} catch (Exception e) {
@@ -236,7 +239,7 @@ public class EyesInBlackActivity extends Activity {
 		try {
 			fo = new FileOutputStream(f);
 			ZipOutputStream zo = new ZipOutputStream(fo);
-			ZipEntry ze = new ZipEntry("x.jpg");
+			ZipEntry ze = new ZipEntry(datestring + ".jpg");
 			zo.putNextEntry(ze);
 			zo.write(data);
 			zo.flush();

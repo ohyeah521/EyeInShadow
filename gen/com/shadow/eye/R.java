@@ -5,7 +5,7 @@
  * should not be modified by hand.
  */
 
-package com.shadow.kilroggeyes;
+package com.shadow.eye;
 
 public final class R {
     public static final class attr {
