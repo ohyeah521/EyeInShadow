@@ -117,6 +117,7 @@ public class EyesInBlackActivity extends Activity {
 	AutoFocusCallback mAfc = new AutoFocusCallback() {
 		@Override
 		public void onAutoFocus(boolean success, Camera camera) {
+			mCamera.setPreviewCallback(null);
 			if (success) {
 				try {
 //					long l[] = { 0, 100, 300, 100 };
