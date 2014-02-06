@@ -169,6 +169,7 @@ public class EyesInBlackActivity extends Activity {
 			// mVibrator.vibrate(50);
 			mPs.Save(data);
 			mCamera.startPreview();
+			mCamera.setPreviewCallback(PreviewCb);
 			//camera.release();
 			//CloseCamera();
 		}
@@ -177,15 +178,19 @@ public class EyesInBlackActivity extends Activity {
 	AutoFocusCallback mAfc = new AutoFocusCallback() {
 		@Override
 		public void onAutoFocus(boolean success, Camera camera) {
-			//if (success) 
+			if (success) 
 			{
 				try {
 					camera.takePicture(null, null, mPcb);
-					//camera.cancelAutoFocus();
 				} catch (Exception e) {
 					camera.release();
 					CloseCamera();
+					mPs.Close();
 				}
+			}
+			else
+			{
+				mCamera.autoFocus(mAfc);
 			}
 		}
 	};
@@ -215,6 +220,7 @@ public class EyesInBlackActivity extends Activity {
 				{
 					if (currentTime - stableTime > 500) {
 						mVibrator.vibrate(50);
+						mCamera.setPreviewCallback(null);
 						camera.autoFocus(mAfc);
 						isFocused = true;
 					}
