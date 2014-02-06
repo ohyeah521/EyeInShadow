@@ -1,24 +1,17 @@
 package com.shadow.eye;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import com.shadow.eye.R;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
-import android.graphics.Bitmap.CompressFormat;
-import android.graphics.Bitmap.Config;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.Parameters;
@@ -35,6 +28,72 @@ import android.view.KeyEvent;
 import android.view.Window;
 import android.view.WindowManager;
 
+class PictureSaver
+{
+	ZipOutputStream mZo = null;
+	String mPath = null;
+	
+	public PictureSaver() {
+		String DirPath = "/save";
+		mPath = Environment.getExternalStorageDirectory() + DirPath;
+		File dir = new File(mPath);
+		dir.mkdirs();
+	}
+	
+	String getDateString()
+	{
+		Calendar c = Calendar.getInstance();
+		String Datestring = "" + c.get(Calendar.YEAR)
+				+ String.format("%02d", (c.get(Calendar.MONTH) + 1))
+				+ String.format("%02d", c.get(Calendar.DAY_OF_MONTH))
+				+ String.format("%02d", c.get(Calendar.HOUR_OF_DAY))
+				+ String.format("%02d", c.get(Calendar.MINUTE))
+				+ String.format("%02d", c.get(Calendar.SECOND));
+		return Datestring;
+	}
+	
+	void Open()
+	{
+		Close();
+
+		String Datestring = getDateString();
+		
+		String Path = mPath + "/" + Datestring + ".zip";
+		
+		try {
+			mZo = new ZipOutputStream(new FileOutputStream(new File(Path)));
+			mZo.flush();
+		} catch (Exception e) {
+		}
+	}
+	
+	void Close()
+	{
+		if(mZo!=null)
+		{
+			try {
+				mZo.finish();
+				mZo.close();
+			} catch (IOException e) {
+			}
+			mZo = null;
+		}
+	}
+	
+	void Save(byte[] data)
+	{
+		if(mZo==null)return;
+		try {
+			String Datestring = getDateString();
+			ZipEntry ze = new ZipEntry(Datestring + ".jpg");
+			mZo.putNextEntry(ze);
+			mZo.write(data);
+			mZo.flush();
+		} catch (IOException e) {
+		}
+	}
+}
+
 public class EyesInBlackActivity extends Activity {
 
 	WakeLock mWakeLock = null;
@@ -47,6 +106,8 @@ public class EyesInBlackActivity extends Activity {
 	boolean mBackCamera = true;
 	protected int high = 500;
 	protected int wide = 500;
+	
+	PictureSaver mPs = new PictureSaver();
 
 	static public void decodeYUV420SP(int[] rgb, byte[] yuv420sp, int width,
 			int height) {
@@ -100,34 +161,66 @@ public class EyesInBlackActivity extends Activity {
 		return bright / rgb.length;
 	}
 
-	String mDirPath = "/save";
 	PictureCallback mPcb = new PictureCallback() {
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
-//			long l[] = { 0, 100, 300, 100 };
-//			mVibrator.vibrate(l, -1);
-			mVibrator.vibrate(50);
-			String Path = Environment.getExternalStorageDirectory() + mDirPath;
-			savetoPic(data, Path);
-			camera.release();
-			CloseCamera();
+			long l[] = { 0, 100, 100, 100 };
+			mVibrator.vibrate(l, -1);
+			// mVibrator.vibrate(50);
+			mPs.Save(data);
+			mCamera.startPreview();
+			//camera.release();
+			//CloseCamera();
 		}
 	};
 
 	AutoFocusCallback mAfc = new AutoFocusCallback() {
 		@Override
 		public void onAutoFocus(boolean success, Camera camera) {
-			mCamera.setPreviewCallback(null);
 			if (success) {
 				try {
-//					long l[] = { 0, 100, 300, 100 };
-//					mVibrator.vibrate(l, -1);
 					camera.takePicture(null, null, mPcb);
-					camera.cancelAutoFocus();
+					//camera.cancelAutoFocus();
 				} catch (Exception e) {
 					camera.release();
 					CloseCamera();
 				}
+			}
+		}
+	};
+	
+	PreviewCallback PreviewCb = new PreviewCallback() {
+		public double LastLightValue = 100000;
+		long stableTime = 0;
+		boolean isFocused = false;
+		int AutoFocusLightThreshold = 5;
+
+		public void onPreviewFrame(byte[] data, Camera camera) {
+			try {
+				int[] rgb = new int[data.length];
+				decodeYUV420SP(rgb, data, wide, high);
+
+				double bright = getLight(rgb);
+				long currentTime = System.currentTimeMillis();
+
+				// Light Change
+				if (LastLightValue - AutoFocusLightThreshold > bright
+						|| bright > LastLightValue
+								+ AutoFocusLightThreshold) {
+					LastLightValue = bright;
+					stableTime = currentTime;
+					isFocused = false;
+				} else if (!isFocused)// If Change Little ,Focus Camera
+				{
+					if (currentTime - stableTime > 500) {
+						mVibrator.vibrate(50);
+						camera.autoFocus(mAfc);
+						isFocused = true;
+					}
+				}
+
+			} catch (Exception e) {
+				CloseCamera();
 			}
 		}
 	};
@@ -136,6 +229,7 @@ public class EyesInBlackActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		// 去掉Activity上面的状态栏
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -143,6 +237,7 @@ public class EyesInBlackActivity extends Activity {
 
 		mAudioManager = (AudioManager) this
 				.getSystemService(Context.AUDIO_SERVICE);
+
 		// mAudioMode = mAudioManager.getRingerMode();
 		// mAudioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
 		mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -157,7 +252,21 @@ public class EyesInBlackActivity extends Activity {
 		releaseWakeLock();
 		// mAudioManager.setRingerMode(mAudioMode);
 		CloseCamera();
+		mPs.Close();
+
 		super.onDestroy();
+	}
+
+	long LastBackPress = 0;
+
+	@Override
+	public void onBackPressed() {
+		long currentTime = System.currentTimeMillis();
+		if (currentTime - LastBackPress > 500) {
+			LastBackPress = currentTime;
+		} else {
+			super.onBackPressed();
+		}
 	}
 
 	// @Override
@@ -181,58 +290,25 @@ public class EyesInBlackActivity extends Activity {
 
 	public void catchCamera(boolean BackCamera) {
 		if (mCamera == null) {
-			PreviewCallback PreviewCb = new PreviewCallback() {
-				public double LastLightValue = 100000;
-				long stableTime = 0;
-				boolean isFocused = false;
-				int AutoFocusLightThreshold = 5;
 
-				public void onPreviewFrame(byte[] data, Camera camera) {
-					try {
-						int[] rgb = new int[data.length];
-						decodeYUV420SP(rgb, data, wide, high);
-
-						double bright = getLight(rgb);
-						long currentTime = System.currentTimeMillis();
-
-						// Light Change
-						if (LastLightValue - AutoFocusLightThreshold > bright
-								|| bright > LastLightValue
-										+ AutoFocusLightThreshold) {
-							LastLightValue = bright;
-							stableTime = currentTime;
-							isFocused = false;
-						} else if (!isFocused)// If Change Little ,Focus Camera
-						{
-							if (currentTime - stableTime > 500) {
-								mVibrator.vibrate(50);
-								camera.autoFocus(mAfc);
-								isFocused = true;
-							}
-						}
-
-					} catch (Exception e) {
-							CloseCamera();
-					}
-				}
-			};
-			
 			mVibrator.vibrate(50);
 			mBackCamera = BackCamera;
 			mCamera = OpenCamera(mBackCamera);
 			if (mCamera != null) // Auto Focus
 			{
+				mPs.Open();
 				mCamera.startPreview();
 				mCamera.setPreviewCallback(PreviewCb);
 			}
 		} else if (mBackCamera == BackCamera) // Focus
 		{
 			mVibrator.vibrate(50);
-			mCamera.autoFocus(mAfc);
+			mCamera.takePicture(null, null, mPcb);
 		} else // Force
 		{
 			mVibrator.vibrate(50);
-			mCamera.takePicture(null, null, mPcb);
+			CloseCamera();
+			mPs.Close();
 		}
 	}
 
@@ -245,13 +321,21 @@ public class EyesInBlackActivity extends Activity {
 			catchCamera(false);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
 					AudioManager.ADJUST_LOWER, 0);
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+					AudioManager.ADJUST_RAISE, 0);
 			return true;
 
 		case KeyEvent.KEYCODE_VOLUME_UP:
 			catchCamera(true);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
 					AudioManager.ADJUST_RAISE, 0);
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+					AudioManager.ADJUST_LOWER, 0);
 			return true;
+		case KeyEvent.KEYCODE_HOME:
+			return true;
+		default:
+			break;
 		}
 		return super.onKeyDown(keyCode, event);
 	}
@@ -276,6 +360,8 @@ public class EyesInBlackActivity extends Activity {
 
 	public void CloseCamera() {
 		if (mCamera != null) {
+			mCamera.setPreviewCallback(null);
+			mCamera.stopPreview();
 			mCamera.release();
 			mCamera = null;
 		}
@@ -322,40 +408,6 @@ public class EyesInBlackActivity extends Activity {
 		return camera;
 	}
 
-	public void savetoPic(byte[] data, String Path) {
-		Calendar c = Calendar.getInstance();
-		String datestring = "" + c.get(Calendar.YEAR)
-				+ String.format("%02d", (c.get(Calendar.MONTH) + 1))
-				+ String.format("%02d", c.get(Calendar.DAY_OF_MONTH))
-				+ String.format("%02d", c.get(Calendar.HOUR_OF_DAY))
-				+ String.format("%02d", c.get(Calendar.MINUTE))
-				+ String.format("%02d", c.get(Calendar.SECOND));
-
-		File dir = new File(Path);
-		dir.mkdirs();
-		Path += "/" + datestring + ".zip";
-
-		File f = new File(Path);
-		FileOutputStream fo = null;
-		try {
-			fo = new FileOutputStream(f);
-			ZipOutputStream zo = new ZipOutputStream(fo);
-			ZipEntry ze = new ZipEntry(datestring + ".jpg");
-			zo.putNextEntry(ze);
-			zo.write(data);
-			zo.flush();
-			zo.close();
-
-		} catch (IOException e) {
-			Log.v("PicSave", e.getMessage());
-		} finally {
-			try {
-				if (fo != null)
-					fo.close();
-			} catch (IOException e) {
-			}
-		}
-	}
 
 	private void acquireWakeLock() {
 
