@@ -101,6 +101,7 @@ public class EyesInBlackActivity extends Activity {
 	Camera mCamera = null;
 	Vibrator mVibrator = null;
 	SurfaceTexture mSt = null;
+	boolean mAutotake = false;
 
 	// int mAudioMode;
 	boolean mBackCamera = true;
@@ -166,7 +167,7 @@ public class EyesInBlackActivity extends Activity {
 		public void onPictureTaken(byte[] data, Camera camera) {
 			long l[] = { 0, 100, 100, 100 };
 			mVibrator.vibrate(l, -1);
-			// mVibrator.vibrate(50);
+			
 			mPs.Save(data);
 			mCamera.startPreview();
 			mCamera.setPreviewCallback(PreviewCb);
@@ -303,19 +304,35 @@ public class EyesInBlackActivity extends Activity {
 			mCamera = OpenCamera(mBackCamera);
 			if (mCamera != null) // Auto Focus
 			{
-				mPs.Open();
 				mCamera.startPreview();
-				mCamera.setPreviewCallback(PreviewCb);
 			}
-		} else if (mBackCamera == BackCamera) // Focus
+		} else if (mBackCamera == BackCamera) // Catch
 		{
 			mVibrator.vibrate(50);
-			mCamera.takePicture(null, null, mPcb);
-		} else // Force
+			if(mAutotake)
+			{
+				mCamera.takePicture(null, null, mPcb);
+			}
+			else
+			{
+				mPs.Open();
+				mCamera.setPreviewCallback(PreviewCb);
+				mAutotake = true;
+			}
+		} else // Close
 		{
 			mVibrator.vibrate(50);
-			CloseCamera();
-			mPs.Close();
+			if(mAutotake)
+			{
+				mCamera.setPreviewCallback(null);
+				mPs.Close();
+				mAutotake = false;
+			}
+			else
+			{
+				CloseCamera();
+				mPs.Close();
+			}
 		}
 	}
 
