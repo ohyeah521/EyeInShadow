@@ -352,9 +352,9 @@ public class EyesInBlackActivity extends Activity {
 		case KeyEvent.KEYCODE_VOLUME_UP:
 			catchCamera(true);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-					AudioManager.ADJUST_RAISE, 0);
-			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
 					AudioManager.ADJUST_LOWER, 0);
+			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+					AudioManager.ADJUST_RAISE, 0);
 			return true;
 		case KeyEvent.KEYCODE_HOME:
 			return true;
