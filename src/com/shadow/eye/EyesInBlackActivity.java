@@ -304,6 +304,7 @@ public class EyesInBlackActivity extends Activity {
 			mCamera = OpenCamera(mBackCamera);
 			if (mCamera != null) // Auto Focus
 			{
+				mPs.Open();
 				mCamera.startPreview();
 			}
 		} else if (mBackCamera == BackCamera) // Catch
@@ -315,7 +316,6 @@ public class EyesInBlackActivity extends Activity {
 			}
 			else
 			{
-				mPs.Open();
 				mCamera.setPreviewCallback(PreviewCb);
 				mAutotake = true;
 			}
@@ -325,7 +325,6 @@ public class EyesInBlackActivity extends Activity {
 			if(mAutotake)
 			{
 				mCamera.setPreviewCallback(null);
-				mPs.Close();
 				mAutotake = false;
 			}
 			else
