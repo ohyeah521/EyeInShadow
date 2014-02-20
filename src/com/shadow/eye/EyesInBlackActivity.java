@@ -1,7 +1,6 @@
 package com.shadow.eye;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
@@ -32,7 +31,6 @@ class PictureSaver
 {
 	ZipOutputStream mZo = null;
 	String mPath = null;
-	
 	public PictureSaver() {
 		String DirPath = "/save";
 		mPath = Environment.getExternalStorageDirectory() + DirPath;
@@ -62,7 +60,6 @@ class PictureSaver
 		
 		try {
 			mZo = new ZipOutputStream(new FileOutputStream(new File(Path)));
-			mZo.flush();
 		} catch (Exception e) {
 		}
 	}
