@@ -1,6 +1,7 @@
 package com.shadow.eye;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
@@ -29,13 +30,8 @@ import android.view.WindowManager;
 
 class PictureSaver
 {
-	ZipOutputStream mZo = null;
 	String mPath = null;
 	public PictureSaver() {
-		String DirPath = "/save";
-		mPath = Environment.getExternalStorageDirectory() + DirPath;
-		File dir = new File(mPath);
-		dir.mkdirs();
 	}
 	
 	String getDateString()
@@ -56,37 +52,36 @@ class PictureSaver
 
 		String Datestring = getDateString();
 		
-		String Path = mPath + "/" + Datestring + ".zip";
-		
-		try {
-			mZo = new ZipOutputStream(new FileOutputStream(new File(Path)));
-		} catch (Exception e) {
-		}
+		String DirPath = "/save";
+		mPath = Environment.getExternalStorageDirectory() + DirPath;
+		new File(mPath).mkdirs();
+		mPath += "/" + Datestring;
+		new File(mPath).mkdirs();
 	}
 	
 	void Close()
 	{
-		if(mZo!=null)
-		{
-			try {
-				mZo.finish();
-				mZo.close();
-			} catch (IOException e) {
-			}
-			mZo = null;
-		}
+		mPath = null;
 	}
 	
 	void Save(byte[] data)
 	{
-		if(mZo==null)return;
+		if(mPath==null)return;
+		String Datestring = getDateString();
+		String Path = mPath + "/" + Datestring + ".zip";
+		ZipOutputStream mZo;
 		try {
-			String Datestring = getDateString();
-			ZipEntry ze = new ZipEntry(Datestring + ".jpg");
-			mZo.putNextEntry(ze);
-			mZo.write(data);
-			mZo.flush();
-		} catch (IOException e) {
+			mZo = new ZipOutputStream(new FileOutputStream(new File(Path)));
+			try {
+				ZipEntry ze = new ZipEntry(Datestring + ".jpg");
+				mZo.putNextEntry(ze);
+				mZo.write(data);
+				mZo.flush();
+				mZo.close();
+			} catch (IOException e) {
+			}
+		} catch (Exception e1) {
+
 		}
 	}
 }
