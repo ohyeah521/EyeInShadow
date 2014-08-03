@@ -28,10 +28,10 @@ import android.view.KeyEvent;
 import android.view.Window;
 import android.view.WindowManager;
 
-class PictureSaver
+class DataSaver
 {
 	String mPath = null;
-	public PictureSaver() {
+	public DataSaver() {
 	}
 	
 	String getDateString()
@@ -54,9 +54,7 @@ class PictureSaver
 		
 		String DirPath = "/save";
 		mPath = Environment.getExternalStorageDirectory() + DirPath;
-		new File(mPath).mkdirs();
 		mPath += "/" + Datestring;
-		new File(mPath).mkdirs();
 	}
 	
 	void Close()
@@ -64,11 +62,12 @@ class PictureSaver
 		mPath = null;
 	}
 	
-	void Save(byte[] data)
+	void SavePicture(byte[] data)
 	{
 		if(mPath==null)return;
 		String Datestring = getDateString();
 		String Path = mPath + "/" + Datestring + ".zip";
+		new File(mPath).mkdirs();
 		ZipOutputStream mZo;
 		try {
 			mZo = new ZipOutputStream(new FileOutputStream(new File(Path)));
@@ -93,14 +92,11 @@ public class EyesInBlackActivity extends Activity {
 	Camera mCamera = null;
 	Vibrator mVibrator = null;
 	SurfaceTexture mSt = null;
-	boolean mAutotake = false;
 
-	// int mAudioMode;
-	boolean mBackCamera = true;
 	protected int high = 500;
 	protected int wide = 500;
 	
-	PictureSaver mPs = new PictureSaver();
+	DataSaver mDataSaver = new DataSaver();
 
 	static public void decodeYUV420SP(int[] rgb, byte[] yuv420sp, int width,
 			int height) {
@@ -160,7 +156,7 @@ public class EyesInBlackActivity extends Activity {
 			long l[] = { 0, 100, 100, 100 };
 			mVibrator.vibrate(l, -1);
 			
-			mPs.Save(data);
+			mDataSaver.SavePicture(data);
 			mCamera.startPreview();
 			mCamera.setPreviewCallback(PreviewCb);
 			//camera.release();
@@ -178,7 +174,7 @@ public class EyesInBlackActivity extends Activity {
 				} catch (Exception e) {
 					camera.release();
 					CloseCamera();
-					mPs.Close();
+					mDataSaver.Close();
 				}
 			}
 			else
@@ -252,7 +248,7 @@ public class EyesInBlackActivity extends Activity {
 		releaseWakeLock();
 		// mAudioManager.setRingerMode(mAudioMode);
 		CloseCamera();
-		mPs.Close();
+		mDataSaver.Close();
 
 		super.onDestroy();
 	}
@@ -288,42 +284,64 @@ public class EyesInBlackActivity extends Activity {
 
 	}
 
-	public void catchCamera(boolean BackCamera) {
-		if (mCamera == null) {
+	final int NULL_MODE = 0,PHOTO_MODE = 1, VIDEO_MODE = 2; 
+	int mCameraStatue = NULL_MODE;
+	boolean mBackCamera = true;
+	long lastVolumnKeyPressTime = 0;
+	public void controlCamera(boolean BackCamera) {
+		mVibrator.vibrate(50);
 
-			mVibrator.vibrate(50);
-			mBackCamera = BackCamera;
-			mCamera = OpenCamera(mBackCamera);
-			if (mCamera != null) // Auto Focus
-			{
-				mPs.Open();
-				mCamera.startPreview();
-			}
-		} else if (mBackCamera == BackCamera) // Catch
+		if(mCameraStatue == NULL_MODE)
 		{
-			mVibrator.vibrate(50);
-			if(mAutotake)
+			long currentTime = System.currentTimeMillis();
+			if(lastVolumnKeyPressTime + 3000 < currentTime)
+			{
+				lastVolumnKeyPressTime = currentTime;
+				mBackCamera = BackCamera;
+				return;
+			}
+			lastVolumnKeyPressTime = 0;
+			if (mCamera == null) {
+				mCamera = OpenCamera(mBackCamera);
+				if (mCamera != null) // Auto Focus
+				{
+					mDataSaver.Open();
+					mCamera.startPreview();
+				}
+			}
+		}
+		if (mBackCamera == BackCamera) // TakePhoto
+		{
+			if(mCameraStatue==PHOTO_MODE)
 			{
 				mCamera.takePicture(null, null, mPcb);
 			}
-			else
+			if(mCameraStatue==NULL_MODE)
 			{
 				mCamera.setPreviewCallback(PreviewCb);
-				mAutotake = true;
+				mCameraStatue = PHOTO_MODE;
 			}
-		} else // Close
+		}
+		else //TakeVideo or Close
 		{
-			mVibrator.vibrate(50);
-			if(mAutotake)
+			//if(mCameraStatue==PHOTO_MODE)
 			{
 				mCamera.setPreviewCallback(null);
-				mAutotake = false;
-			}
-			else
-			{
+				
 				CloseCamera();
-				mPs.Close();
+				mDataSaver.Close();
+				mCameraStatue = NULL_MODE;
 			}
+			/*
+			if(mCameraStatue==VIDEO_MODE)
+			{
+				mCameraStatue = NULL_MODE;
+			}
+			if(mCameraStatue==NULL_MODE)
+			{
+				mCameraStatue = VIDEO_MODE;
+			}
+			*/
 		}
 	}
 
@@ -333,7 +351,7 @@ public class EyesInBlackActivity extends Activity {
 		switch (keyCode) {
 
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
-			catchCamera(false);
+			controlCamera(false);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
 					AudioManager.ADJUST_LOWER, 0);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
@@ -341,7 +359,7 @@ public class EyesInBlackActivity extends Activity {
 			return true;
 
 		case KeyEvent.KEYCODE_VOLUME_UP:
-			catchCamera(true);
+			controlCamera(true);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
 					AudioManager.ADJUST_LOWER, 0);
 			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
