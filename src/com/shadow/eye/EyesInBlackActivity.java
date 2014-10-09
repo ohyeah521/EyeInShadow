@@ -316,7 +316,7 @@ public class EyesInBlackActivity extends Activity {
 			{
 				mCamera.takePicture(null, null, mPcb);
 			}
-			if(mCameraStatue==NULL_MODE)
+			else if(mCameraStatue==NULL_MODE)
 			{
 				mCamera.setPreviewCallback(PreviewCb);
 				mCameraStatue = PHOTO_MODE;
@@ -333,13 +333,17 @@ public class EyesInBlackActivity extends Activity {
 				mCameraStatue = NULL_MODE;
 			}
 			/*
-			if(mCameraStatue==VIDEO_MODE)
+			else if(mCameraStatue==VIDEO_MODE)
 			{
 				mCameraStatue = NULL_MODE;
 			}
-			if(mCameraStatue==NULL_MODE)
+			else if(mCameraStatue==NULL_MODE)
 			{
 				mCameraStatue = VIDEO_MODE;
+			}
+			else 
+			{
+				mCameraStatue = NULL_MODE;
 			}
 			*/
 		}
