@@ -1,7 +1,6 @@
 package com.shadow.eye;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
@@ -25,7 +24,6 @@ import android.os.Environment;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.Vibrator;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Window;
 import android.view.WindowManager;
@@ -229,7 +227,7 @@ public class EyesInBlackActivity extends Activity {
 			}
 		}
 	};
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -237,9 +235,13 @@ public class EyesInBlackActivity extends Activity {
 
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		
+		//full screen
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
+		
+		// set type TYPE_SYSTEM_ERROR, disabled home key
+		//getWindow().addFlags(WindowManager.LayoutParams.TYPE_SYSTEM_ERROR);
+		
 		mAudioManager = (AudioManager) this
 				.getSystemService(Context.AUDIO_SERVICE);
 
@@ -274,13 +276,6 @@ public class EyesInBlackActivity extends Activity {
 			super.onBackPressed();
 		}
 	}
-
-	// @Override
-	// public boolean onCreateOptionsMenu(Menu menu) {
-	// // Inflate the menu; this adds items to the action bar if it is present.
-	// getMenuInflater().inflate(R.menu.main, menu);
-	// return true;
-	// }
 
 	private void setBritness(float brightness) {
 
@@ -365,18 +360,10 @@ public class EyesInBlackActivity extends Activity {
 
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
 			controlCamera(false);
-			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-					AudioManager.ADJUST_LOWER, 0);
-			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-					AudioManager.ADJUST_RAISE, 0);
 			return true;
 
 		case KeyEvent.KEYCODE_VOLUME_UP:
 			controlCamera(true);
-			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-					AudioManager.ADJUST_LOWER, 0);
-			mAudioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-					AudioManager.ADJUST_RAISE, 0);
 			return true;
 		case KeyEvent.KEYCODE_HOME:
 			return true;
