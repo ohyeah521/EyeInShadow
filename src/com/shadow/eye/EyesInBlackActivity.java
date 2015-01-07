@@ -10,6 +10,8 @@ import java.util.zip.ZipOutputStream;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.KeyguardManager;
+import android.app.KeyguardManager.KeyguardLock;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -98,6 +100,13 @@ public class EyesInBlackActivity extends Activity {
 	
 	DataSaver mDataSaver = new DataSaver();
 
+	public void  disableKeyguard()
+	{
+        KeyguardManager keyguardManager = (KeyguardManager)getSystemService(Context.KEYGUARD_SERVICE);
+        KeyguardLock keyguardLock = keyguardManager.newKeyguardLock("");
+        keyguardLock.disableKeyguard();
+	}
+	
 	static public void decodeYUV420SP(int[] rgb, byte[] yuv420sp, int width,
 			int height) {
 		final int frameSize = width * height;
@@ -227,7 +236,7 @@ public class EyesInBlackActivity extends Activity {
 
 
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		// 去掉Activity上面的状态栏
+		
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 				WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
@@ -241,6 +250,7 @@ public class EyesInBlackActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		setBritness(1);
 		acquireWakeLock();
+		disableKeyguard();
 	}
 
 	@Override
@@ -351,7 +361,6 @@ public class EyesInBlackActivity extends Activity {
 
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		// 获取手机当前音量值
 		switch (keyCode) {
 
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
@@ -458,7 +467,6 @@ public class EyesInBlackActivity extends Activity {
 		}
 	}
 
-	// 释放设备电源锁
 	private void releaseWakeLock() {
 		if (null != mWakeLock) {
 			mWakeLock.release();
